@@ -1,0 +1,91 @@
+{
+  "exercise_date": "2026-09-23",
+  "customers": {
+    "SK4821X": {
+      "name": "Priya Nair",
+      "loyalty_tier": "Gold",
+      "contact": "priya.nair@example.com",
+      "travel_history": { "flights_last_12mo": 6, "prior_complaints": ["delayed baggage, resolved with voucher"] },
+      "bookings": [
+        {
+          "flight": "SK-204",
+          "route": "Delhi → Goa",
+          "date": "2026-09-23",
+          "scheduled_departure": "18:40",
+          "status": "cancelled",
+          "status_reason": "operational reasons"
+        },
+        {
+          "flight": "Return",
+          "route": "Goa → Delhi",
+          "date": "2026-09-25",
+          "scheduled_departure": "16:20",
+          "status": "unaffected"
+        }
+      ]
+    },
+    "TR1190B": {
+      "name": "Arvind Kulkarni",
+      "loyalty_tier": "Silver",
+      "contact": "arvind.kulkarni@example.com",
+      "travel_history": { "flights_last_12mo": 3, "prior_complaints": [] },
+      "bookings": [
+        {
+          "flight": "SK-118",
+          "route": "Mumbai → Bengaluru",
+          "date": "2026-09-23",
+          "scheduled_departure": "07:10",
+          "status": "delayed",
+          "delay_hours": 4,
+          "new_departure": "11:10"
+        }
+      ]
+    },
+    "WL7742": {
+      "name": "Meher Kaur",
+      "loyalty_tier": "Platinum",
+      "contact": "meher.kaur@example.com",
+      "travel_history": { "flights_last_12mo": 10, "prior_complaints": ["overbooking, resolved with tier-status upgrade"] },
+      "bookings": [
+        {
+          "flight": "SK-305",
+          "route": "Delhi → Hyderabad",
+          "date": "2026-09-23",
+          "scheduled_departure": "14:00",
+          "status": "delayed",
+          "delay_hours": 6,
+          "new_departure": "20:00",
+          "alternate_flight_offered": {
+            "note": "Customer-requested alternate, higher-fare flight (per scenario brief)",
+            "fare_difference": 2000
+          }
+        }
+      ]
+    }
+  },
+  "rules": {
+    "cancellation_rebooking": "If a flight is cancelled by the airline, the customer is entitled to a free rebooking on the next available flight within 24 hours, or a full refund — customer's choice.",
+    "delay_compensation": {
+      "under_3h": "₹500 meal voucher",
+      "over_3h": "meal voucher + lounge access",
+      "over_5h": "meal voucher + hotel accommodation, covering only the delayed hours (not a full night's stay)"
+    },
+    "refund_processing": "Refunds for airline-caused cancellations are processed in full within 7 business days, to the original payment method only.",
+    "fare_difference": "If a customer voluntarily chooses to rebook on a higher-fare flight (not airline-caused), they must pay the fare difference. Agents cannot waive fare differences above ₹1,500 without supervisor approval.",
+    "loyalty_tier": "Gold and Platinum tier customers get priority rebooking (first access to next-available seats) but no additional compensation beyond the standard policy."
+  },
+  "allowed_actions": [
+    "rebook_within_24h_free_if_airline_caused",
+    "issue_meal_voucher_and_lounge_per_rule",
+    "arrange_hotel_for_delayed_hours_only",
+    "initiate_refund_for_airline_caused_cancellation",
+    "provide_own_booking_and_flight_status"
+  ],
+  "prohibited_actions_must_escalate": [
+    "approve_compensation_beyond_policy",
+    "waive_fare_difference_above_1500",
+    "make_exception_for_non_airline_caused_disruption",
+    "handle_legal_threat_or_formal_complaint",
+    "process_refund_to_different_payment_method"
+  ]
+}
