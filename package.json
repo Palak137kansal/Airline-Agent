@@ -1,0 +1,18 @@
+{
+  "name": "airline-resolution-agent",
+  "version": "1.0.0",
+  "description": "Customer-facing resolution agent for airline disruptions — grounded, rules-gated, LLM-phrased prototype.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test:scenarios": "node test-scenarios.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
