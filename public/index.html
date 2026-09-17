@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SkyResolve — Disruption Support Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">✈</span>
+        <span class="brand-name">SkyResolve</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="chat-panel">
+        <div id="messages" class="messages"></div>
+        <form id="composer" class="composer">
+          <input id="messageInput" type="text" placeholder="Type the customer's message…" autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+
+      <aside class="reasoning-panel">
+        <h2>Agent reasoning</h2>
+        <p class="reasoning-hint">Every reply is grounded in this trace — nothing the agent says goes beyond what's shown here.</p>
+        <div id="reasoningLog" class="reasoning-log"></div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
