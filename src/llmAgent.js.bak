@@ -1,0 +1,107 @@
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+// Swap for 'claude-haiku-4-5-20251001' if you want a faster/cheaper model for the intent-extraction stage.
+const MODEL = 'claude-sonnet-5';
+
+const TAG_VOCAB = `
+- "flight_status": asking about their flight/booking status
+- "rebook": wants to be rebooked on another flight
+- "refund": wants a refund
+- "meal_voucher": mentions/asks about a meal voucher
+- "lounge_access": asks about lounge access
+- "hotel_delayed_hours": asks for hotel/accommodation for the delay period
+- "hotel_full_night": specifically asks for a FULL night's hotel stay
+- "cash_compensation": asks for cash/monetary compensation beyond standard policy
+- "free_upgrade": asks for a free upgrade (e.g. to business class) as compensation
+- "fare_change": wants to move to a DIFFERENT (often higher-fare) flight instead of the one they're on/waiting for
+- "refund_diff_payment_method": wants a refund sent to a different payment method/account than original
+- "legal_threat": threatens legal action
+- "formal_complaint": explicitly says they want to file a formal complaint
+- "general_inquiry": greeting, thanks, small talk, or anything not covered above`;
+
+async function callClaude({ system, messages, maxTokens = 500 }) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.');
+
+  const resp = await fetch(ANTHROPIC_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Anthropic API error ${resp.status}: ${text}`);
+  }
+
+  const data = await resp.json();
+  return data.content.map((b) => b.text || '').join('');
+}
+
+function safeParseJSON(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch { /* fall through */ }
+    }
+    return null;
+  }
+}
+
+/**
+ * STAGE 1 — Intent extraction only.
+ * This call NEVER decides what the customer is entitled to. It only
+ * translates free text into tags from a fixed vocabulary. This is the
+ * only place customer free-text is allowed to influence anything.
+ */
+export async function extractIntent({ message, history = [] }) {
+  const system = `You are the intent-extraction module for an airline customer-support system. You do NOT talk to the customer and you do NOT decide policy. You ONLY output JSON.
+
+Read the customer's latest message (with prior turns for context) and extract every distinct request it contains, using ONLY these tags:
+${TAG_VOCAB}
+
+Rules:
+- Include EVERY applicable tag, even if the customer packs multiple asks into one sentence.
+- If a specific rupee amount is mentioned for a fare difference, extract it as "fareDifference" (a plain number). Otherwise set it to null.
+- Never invent a tag outside the list above.
+- Output ONLY this JSON shape, nothing else, no markdown fences: {"tags": ["..."], "fareDifference": number|null}`;
+
+  const turns = [...history, { role: 'user', content: message }];
+  const raw = await callClaude({ system, messages: turns, maxTokens: 300 });
+  const parsed = safeParseJSON(raw);
+  return {
+    tags: Array.isArray(parsed?.tags) && parsed.tags.length ? parsed.tags : ['general_inquiry'],
+    fareDifference: typeof parsed?.fareDifference === 'number' ? parsed.fareDifference : null,
+  };
+}
+
+/**
+ * STAGE 2 — Reply phrasing only.
+ * This call receives the rules engine's decisions as ground truth and is
+ * explicitly forbidden from promising anything not listed there. It
+ * cannot approve, waive, or invent compensation — it can only phrase
+ * what stage-that-isn't-an-LLM already decided.
+ */
+export async function generateReply({ customer, pnr, booking, message, history = [], decisions }) {
+  const system = `You are a warm, professional airline customer-support agent, currently chatting with ${customer.name} (${customer.loyalty_tier} tier), booking reference ${pnr}, regarding flight ${booking.flight} (${booking.route}).
+
+Current booking status (ground truth, do not contradict): ${JSON.stringify(booking)}
+
+A separate rules engine has already decided the outcome of everything the customer is asking about in this turn. This is your ONLY source of truth for what you may say — do not add, soften, or hint at anything beyond it:
+${JSON.stringify(decisions, null, 2)}
+
+How to phrase each decision type:
+- "ALLOW": confirm clearly that you're doing this, using the given detail. Do not add anything not in the detail.
+- "DENY_WITH_POLICY": politely explain why this isn't covered, using the given reason, and mention what they ARE entitled to if relevant. Do not apologize excessively or imply you might reconsider.
+- "ESCALATE": acknowledge the request with empathy, then state clearly and simply that you're escalating this to a human specialist team who will follow up directly. Never imply you might approve it yourself, and never explain the internal policy threshold that triggered escalation.
+
+Tone: direct, warm, concise (aim for 3-5 sentences total even if multiple decisions apply), plain language, no corporate filler. Acknowledge frustration briefly without being saccharine. Never invent numbers, policies, or facts beyond what's given above.`;
+
+  const turns = [...history, { role: 'user', content: message }];
+  return callClaude({ system, messages: turns, maxTokens: 400 });
+}
